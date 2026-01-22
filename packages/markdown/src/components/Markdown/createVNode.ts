@@ -1,12 +1,12 @@
 import { Fragment, type Slots, type VNode, defineAsyncComponent, h } from 'vue';
-import type { ExtendedToken, RendererToken, TagToken } from './types';
+import type { ExtendedToken, RendererToken, TagAttribute, TagToken } from './types';
 import {
-  escapeHtml,
-  generateClosingBlockTag,
   generateClosingTag,
-  getAAttr,
-  getAttribute,
-  stripOuterPTag,
+  getAAttribute,
+  getHtmlAttribute,
+  getImgAttribute,
+  identifyBlockTag,
+  sanitizeHtml,
 } from './utils';
 import type MarkdownIt from 'markdown-it';
 
@@ -38,8 +38,7 @@ const handleFenceNode = (
   slots: Slots,
 ) => {
   const lang = ComponentType.split(':')[1] || 'plaintext';
-  const rawCode = (node as ExtendedToken).content || '';
-  const escapedCode = escapeHtml(rawCode);
+  const rawCode = (node as ExtendedToken)?.content || '';
 
   const namedSlotResult = handleSlot(lang, slots, { lang, rawCode });
   if (namedSlotResult) return namedSlotResult;
@@ -53,10 +52,136 @@ const handleFenceNode = (
       key: index,
       class: `markdown-code-block language-${lang}`,
       'data-lang': lang,
-      'data-raw-code': escapedCode,
     },
     h('pre', { class: 'pre' }, [h('code', rawCode)]),
   );
+};
+
+const handleHtmlLine = (node: RendererToken, index: number, slots: Slots, sanitize: boolean) => {
+  const tagNode = node as TagToken;
+  const tagAttrs: TagAttribute[] = [];
+  let content = '';
+
+  console.log('handleHtmlLine', tagNode);
+
+  const { completeTag, isOpenTag, isSelfClosing, tagName } = generateClosingTag(
+    tagNode.content || '',
+  );
+
+  const defaultRender = h('span', {
+    key: index,
+    innerHTML: completeTag || '',
+    style: { display: 'contents' },
+  });
+
+  if (isSelfClosing) return defaultRender;
+
+  if (isOpenTag) {
+    try {
+      const { content: parsedContent, tagAttrs: parsedTagAttrs } = getHtmlAttribute(
+        completeTag,
+        tagName,
+        false,
+      );
+      content = parsedContent;
+      tagAttrs.push(...parsedTagAttrs);
+    } catch (error) {
+      console.error('Failed to parse HTML content:', error);
+      return defaultRender;
+    }
+
+    const slotParams = {
+      originalContent: tagNode.content || '',
+      content,
+      tagName,
+      attrs: tagAttrs,
+    };
+    const slotResult = handleSlot(
+      `Html${tagName.charAt(0).toUpperCase()}${tagName.slice(1)}`,
+      slots,
+      slotParams,
+    );
+
+    if (slotResult) {
+      return slotResult;
+    }
+  }
+
+  if (sanitize) {
+    return h(
+      defineAsyncComponent(() =>
+        sanitizeHtml(tagNode.content || '').then((purifiedHtml) =>
+          h('span', {
+            key: index,
+            innerHTML: purifiedHtml,
+            style: { display: 'contents' },
+          }),
+        ),
+      ),
+    );
+  }
+
+  return defaultRender;
+};
+
+const handleHtmlBlock = (node: RendererToken, index: number, slots: Slots, sanitize: boolean) => {
+  const tagNode = node as TagToken;
+  const tagAttrs: TagAttribute[] = [];
+  let content = '';
+  const defaultRender = h('span', {
+    key: index,
+    innerHTML: tagNode.content || '',
+    style: { display: 'contents' },
+  });
+
+  try {
+    const {
+      content: parsedContent,
+      tagAttrs: parsedTagAttrs,
+      isSelfClosing,
+    } = getHtmlAttribute(tagNode.content || '', '', true);
+    if (isSelfClosing) return defaultRender;
+    content = parsedContent;
+    tagAttrs.push(...parsedTagAttrs);
+    const tagName = identifyBlockTag(tagNode.content || '');
+
+    const slotParams = {
+      originalContent: tagNode.content || '',
+      content: content,
+      tagName,
+      attrs: tagAttrs,
+    };
+    console.log(tagName);
+
+    const slotResult = handleSlot(
+      'Html' + tagName.charAt(0).toUpperCase() + tagName.slice(1),
+      slots,
+      slotParams,
+    );
+
+    if (slotResult) {
+      return slotResult;
+    }
+
+    if (sanitize) {
+      return h(
+        defineAsyncComponent(() =>
+          sanitizeHtml(tagNode.content || '').then((purifiedHtml) =>
+            h('div', {
+              key: index,
+              innerHTML: purifiedHtml,
+              style: { display: 'contents' },
+            }),
+          ),
+        ),
+      );
+    }
+  } catch (error) {
+    console.error('Failed to parse HTML content:', error);
+    return defaultRender;
+  }
+
+  return defaultRender;
 };
 
 export default function createVNode(
@@ -79,18 +204,18 @@ export default function createVNode(
     case 'text':
       return (
         handleSlot('text', slots, {
-          content: (node as ExtendedToken).content,
+          content: (node as ExtendedToken)?.content,
         }) ||
-        (node as ExtendedToken).content ||
+        (node as ExtendedToken)?.content ||
         ''
       );
 
     case 'emoji':
       return (
         handleSlot('emoji', slots, {
-          content: (node as ExtendedToken).content,
+          content: (node as ExtendedToken)?.content,
         }) ||
-        (node as ExtendedToken).content ||
+        (node as ExtendedToken)?.content ||
         ''
       );
 
@@ -107,259 +232,33 @@ export default function createVNode(
 
       return (
         handleSlot('image', slots, {
-          src: getAttribute(imgNode, 'src'),
-          alt: getAttribute(imgNode, 'alt') || node.content,
-          title: getAttribute(imgNode, 'title'),
+          src: getImgAttribute(imgNode, 'src'),
+          alt: getImgAttribute(imgNode, 'alt') || node.content,
+          title: getImgAttribute(imgNode, 'title'),
         }) ||
         h('img', {
           key: index,
           class: 'markdown-image',
-          src: getAttribute(imgNode, 'src'),
-          alt: getAttribute(imgNode, 'alt') || node.content,
-          title: getAttribute(imgNode, 'title'),
+          src: getImgAttribute(imgNode, 'src'),
+          alt: getImgAttribute(imgNode, 'alt') || node.content,
+          title: getImgAttribute(imgNode, 'title'),
         })
       );
     }
-
-    case 'html_inline': {
-      const tagNode = node as TagToken;
-      let content = tagNode.content || '';
-      let tagNames: string = '';
-      const tagAttrs: Array<{ [key: string]: string }> = [];
-
-      const inlineTags = [
-        'span',
-        'a',
-        'strong',
-        'em',
-        'br',
-        'img',
-        'input',
-        'label',
-        'code',
-        'mark',
-        'small',
-        'sup',
-        'sub',
-        'q',
-      ];
-      const {
-        completeTag,
-        isOpenTag,
-        tagName: gTagName,
-      } = generateClosingTag(tagNode.content || '');
-      // 将提取的标签名赋值给原变量
-      tagNames = gTagName;
-
-      // 处理双标签
-      if (isOpenTag) {
-        content = completeTag;
-        try {
-          const parser = new DOMParser();
-          // 包裹内容为完整的HTML片段，避免解析异常
-          const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
-          // 获取所有inlineTags中的标签
-          const elements = doc.querySelector('div')?.querySelectorAll(inlineTags.join(',')) || [];
-
-          // 重置content为解析后的纯文本（对应原有replace的返回innerContent逻辑）
-          content = doc.querySelector('div')?.textContent || '';
-
-          // 遍历解析后的元素，提取标签名和属性
-          elements.forEach((el) => {
-            const attrMap: { [key: string]: string } = {};
-            // 遍历所有属性，包括data-*自定义属性
-            Array.from(el.attributes).forEach((attr) => {
-              attrMap[attr.name] = attr.value;
-            });
-            tagAttrs.push(attrMap);
-          });
-        } catch (error) {
-          console.error('Failed to parse HTML content:', error);
-        }
-      }
-
-      if (isOpenTag && tagNode.content) {
-        const slotParams = {
-          originalContent: tagNode.content || '',
-          content: content,
-          tags: tagNames,
-          attrs: tagAttrs,
-        };
-        const slotResult = handleSlot(
-          'Html' + tagNames.charAt(0).toUpperCase() + tagNames.slice(1),
-          slots,
-          slotParams,
-        );
-
-        if (slotResult) {
-          return slotResult;
-        }
-      }
-
-      // 没有找到插槽时，回退到默认的HTML渲染
-      if (sanitize) {
-        const sanitizeHtml = async (html: string) => {
-          try {
-            const module = await import('dompurify');
-            return module.default.sanitize(html) ?? '';
-          } catch (error) {
-            console.error('Failed to sanitize HTML:', error);
-            return html;
-          }
-        };
-
-        return h(
-          defineAsyncComponent(() =>
-            sanitizeHtml(tagNode.content || '').then((purifiedHtml) =>
-              h('span', {
-                key: index,
-                innerHTML: purifiedHtml,
-                style: { display: 'contents' },
-              }),
-            ),
-          ),
-        );
-      }
-
-      return h('span', {
-        key: index,
-        innerHTML: tagNode.content || '',
-        style: { display: 'contents' },
-      });
-    }
-
-    case 'html_block': {
-      const tagNode = node as TagToken;
-      let content = tagNode.content || '';
-      let tagNames: string = '';
-      const tagAttrs: Array<{ [key: string]: string }> = [];
-      const blockTags = [
-        'div',
-        'p',
-        'blockquote',
-        'ul',
-        'ol',
-        'li',
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'h6',
-        'pre',
-        'code',
-        'table',
-        'thead',
-        'tbody',
-        'tr',
-        'td',
-        'th',
-        'section',
-        'article',
-        'header',
-        'footer',
-        'nav',
-        'aside',
-        'figure',
-        'figcaption',
-        'hr',
-        'form',
-        'fieldset',
-      ];
-      const { completeTag, tagName: gTagName } = generateClosingBlockTag(tagNode.content || '');
-      // 将提取的标签名赋值给原变量
-      tagNames = gTagName;
-      // 处理双标签
-      if (tagNames) {
-        content = completeTag;
-        try {
-          const parser = new DOMParser();
-          // 包裹内容为完整的HTML片段，避免解析异常
-          const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
-          // 获取所有blockTags中的标签
-          const elements = doc.querySelector('div')?.querySelectorAll(blockTags.join(',')) || [];
-
-          // 重置content为解析后的纯文本（对应原有replace的返回innerContent逻辑）
-          content = doc.querySelector('div')?.textContent || '';
-
-          // 遍历解析后的元素，提取标签名和属性
-          elements.forEach((el) => {
-            const attrMap: { [key: string]: string } = {};
-            // 遍历所有属性，包括data-*自定义属性
-            Array.from(el.attributes).forEach((attr) => {
-              attrMap[attr.name] = attr.value;
-            });
-            tagAttrs.push(attrMap);
-          });
-        } catch (error) {
-          console.error('Failed to parse HTML content:', error);
-        }
-      }
-
-      if (tagNames) {
-        const slotParams = {
-          originalContent: tagNode.content || '',
-          content: content,
-          tags: tagNames,
-          attrs: tagAttrs,
-        };
-        const slotResult = handleSlot(
-          'Html' + tagNames.charAt(0).toUpperCase() + tagNames.slice(1),
-          slots,
-          slotParams,
-        );
-
-        if (slotResult) {
-          return slotResult;
-        }
-      }
-
-      // 没有找到插槽时，回退到默认的HTML渲染
-      if (sanitize) {
-        const sanitizeHtml = async (html: string) => {
-          try {
-            const module = await import('dompurify');
-            return module.default.sanitize(html) ?? '';
-          } catch (error) {
-            console.error('Failed to sanitize HTML:', error);
-            return html;
-          }
-        };
-
-        return h(
-          defineAsyncComponent(() =>
-            sanitizeHtml(tagNode.content || '').then((purifiedHtml) =>
-              h('div', {
-                key: index,
-                innerHTML: purifiedHtml,
-                style: { display: 'contents' },
-              }),
-            ),
-          ),
-        );
-      }
-
-      return h('div', {
-        key: index,
-        innerHTML: tagNode.content || '',
-        style: { display: 'contents' },
-      });
-    }
-
     case 'code_inline':
       return (
         handleSlot('codeInline', slots, {
-          content: (node as ExtendedToken).content,
+          content: (node as ExtendedToken)?.content,
         }) ||
         h('code', {
           key: index,
           class: 'code-inline',
-          innerHTML: escapeHtml((node as ExtendedToken).content || ''),
+          innerHTML: (node as ExtendedToken)?.content || '',
         })
       );
 
     case 'math_inline': {
-      const formula = (node as ExtendedToken).content || '';
+      const formula = (node as ExtendedToken)?.content || '';
       const html = mdIt.render(
         `${(node as ExtendedToken).markup}${formula}${(node as ExtendedToken).markup}`,
       );
@@ -373,18 +272,18 @@ export default function createVNode(
 
       return (
         handleSlot('mathInline', slots, {
-          content: (node as ExtendedToken).content,
+          content: (node as ExtendedToken)?.content,
         }) ||
         h('span', {
           key: index,
           class: 'math-inline',
-          innerHTML: stripOuterPTag(html),
+          innerHTML: html,
         })
       );
     }
 
     case 'math_block': {
-      const blockFormula = (node as ExtendedToken).content || '';
+      const blockFormula = (node as ExtendedToken)?.content || '';
       const blockHtml = mdIt.render(
         `${(node as ExtendedToken).markup}${blockFormula}${(node as ExtendedToken).markup}`,
       );
@@ -398,7 +297,7 @@ export default function createVNode(
 
       return (
         handleSlot('mathBlock', slots, {
-          content: (node as ExtendedToken).content,
+          content: (node as ExtendedToken)?.content,
         }) ||
         h('div', {
           key: index,
@@ -408,18 +307,24 @@ export default function createVNode(
       );
     }
 
+    case 'html_inline': {
+      return handleHtmlLine(node, index, slots, sanitize);
+    }
+
+    case 'html_block': {
+      return handleHtmlBlock(node, index, slots, sanitize);
+    }
+
     case 'default': {
       const tagNode = node as TagToken;
       const { tag, children } = tagNode;
       const childNodes = processChildren(children, mdIt, slots, sanitize, href);
-      const baseProps: Record<string, string | number> = { key: index };
-
-      baseProps.class = `markdown-${tag}`;
+      const baseProps: Record<string, string | number> = { key: index, class: `markdown-${tag}` };
 
       if (tag === 'a') {
         !href && (baseProps.href = 'javascript:void(0)');
-        baseProps.title = getAAttr(tagNode, 'title');
-        baseProps['data-href'] = getAAttr(tagNode, 'href');
+        baseProps.title = getAAttribute(tagNode, 'title');
+        baseProps['data-href'] = getAAttribute(tagNode, 'href');
       }
 
       if (tag === 'table') {

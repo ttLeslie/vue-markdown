@@ -99,13 +99,13 @@ body > [id^='dv-'] svg {
 
 ## Customize In - line Interactive Components
 
-The `htmlInline` slot can be used to capture in - line `HTML` tags (such as `span`) in `markdown` and customize the interactive logic based on the tag attributes (`attrs`). This is suitable for implementing functions such as reference annotations and dynamic prompts.
+The `htmlInline` slot can be used to capture in - line `HTML` tagName (such as `span`) in `markdown` and customize the interactive logic based on the tag attributes (`attrs`). This is suitable for implementing functions such as reference annotations and dynamic prompts.
 
 <demo vue="markdown/enbasicInline.vue"  />
 
 ## Customize Block - level Interactive Components
 
-The `htmlBlock` slot can be used to handle block - level `HTML` tags (such as `div`). By combining the tag attributes, complex block - level interactive components can be implemented, such as custom cards with titles and metadata.
+The `htmlBlock` slot can be used to handle block - level `HTML` tagName (such as `div`). By combining the tag attributes, complex block - level interactive components can be implemented, such as custom cards with titles and metadata.
 
 <demo vue="markdown/enbasicBlock.vue"  />
 
@@ -142,17 +142,17 @@ The `link - click` event can be used to capture the clicked hyperlink. The event
 
 The component provides flexible custom rendering capabilities through slots. The slot priority is: language - named slot (such as `#mermaid`) > general - type slot (such as `#code`) > default rendering.
 
-| Slot Name  | Description                                                           | Slot Parameters                                                                                     |
-| ---------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| code       | General code block slot                                               | `{ lang: string; rawCode: string }`                                                                 |
-| [lang]     | Specific language code block slot (such as `#javascript`, `#mermaid`) | `{ lang: string; rawCode: string }`                                                                 |
-| image      | Image rendering slot                                                  | `{ src: string; alt: string; title: string }`                                                       |
-| text       | Text content slot                                                     | `{ content: string }`                                                                               |
-| emoji      | Emoji rendering slot                                                  | `{ content: string }`                                                                               |
-| htmlInline | In - line HTML tag slot                                               | `{ originalContent: string; content: string; tags: string; attrs: Array<{[key: string]: string}> }` |
-| htmlBlock  | Block - level HTML tag slot                                           | `{ originalContent: string; content: string; tags: string; attrs: Array<{[key: string]: string}> }` |
-| mathInline | In - line formula slot                                                | `{ content: string }`                                                                               |
-| mathBlock  | Block - level formula slot                                            | `{ content: string }`                                                                               |
+| Slot Name  | Description                                                           | Slot Parameters                                                                                        |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| code       | General code block slot                                               | `{ lang: string; rawCode: string }`                                                                    |
+| [lang]     | Specific language code block slot (such as `#javascript`, `#mermaid`) | `{ lang: string; rawCode: string }`                                                                    |
+| image      | Image rendering slot                                                  | `{ src: string; alt: string; title: string }`                                                          |
+| text       | Text content slot                                                     | `{ content: string }`                                                                                  |
+| emoji      | Emoji rendering slot                                                  | `{ content: string }`                                                                                  |
+| htmlInline | In - line HTML tag slot                                               | `{ originalContent: string; content: string; tagName: string; attrs: Array<{[key: string]: string}> }` |
+| htmlBlock  | Block - level HTML tag slot                                           | `{ originalContent: string; content: string; tagName: string; attrs: Array<{[key: string]: string}> }` |
+| mathInline | In - line formula slot                                                | `{ content: string }`                                                                                  |
+| mathBlock  | Block - level formula slot                                            | `{ content: string }`                                                                                  |
 
 ## Precautions
 

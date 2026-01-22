@@ -7,8 +7,8 @@
     }"
     :sanitize="true"
   >
-    <template #HtmlSpan="{ tags, attrs }">
-      <span v-if="tags === 'span' && attrs[0]['data-type'] === 'quote'" class="quote-tag">{{
+    <template #HtmlSpan="{ tagName, attrs }">
+      <span v-if="tagName === 'span' && attrs[0]['data-type'] === 'quote'" class="quote-tag">{{
         attrs[0]['data-title']
       }}</span>
     </template>

@@ -23,11 +23,14 @@ import { AgentMarkdown } from '~/agent-markdown-vue';
 const content = `
 # 内联标签测试
 
+11<br/>11
+
 ## 基础文本
+<span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3">111<span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3"><span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3"></span></span><span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3"></span></span>1231311 <br>11
 
 
-内容12313<span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3"></span>12313
-11 <br>11
+内容12313
+<span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3"></span>
 `;
 </script>
 

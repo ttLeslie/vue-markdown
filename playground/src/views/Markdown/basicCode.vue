@@ -23,5 +23,6 @@ const content = `
 const code = "agent-markdown-vue";
 \`\`\`
 
+1111222\`code\`
 `;
 </script>

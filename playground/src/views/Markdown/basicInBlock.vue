@@ -7,7 +7,7 @@
     }"
     :sanitize="true"
   >
-    <template #HtmlDiv="{ tags, attrs }">
+    <template #HtmlDiv="{ tagName, attrs }">
       <div
         v-if="attrs[0]['data-type'] === 'code'"
         style="
@@ -33,7 +33,7 @@ import { AgentMarkdown } from '~/agent-markdown-vue';
 
 const content = `
 根据你的要求，我调整了代码结构:
-<div data-type="code" data-title="javascript快速排序的示例" data-time="2023-08-01" data-content="function quickSort(arr) {
+<div data-type="code" data-title="javascript快速排序的示例" data-title="javascript快速排序的示例" data-time="2023-08-01" data-content="function quickSort(arr) {
   if (arr.length <= 1) {
     return arr;
   }

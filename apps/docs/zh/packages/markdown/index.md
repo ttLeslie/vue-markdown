@@ -134,17 +134,17 @@ body > [id^='dv-'] svg {
 
 组件通过插槽提供灵活的自定义渲染能力，插槽优先级为：语言名插槽（如`#mermaid`）> 通用类型插槽（如`#code`）> 默认渲染。
 
-| 插槽名       | 说明                                              | 插槽参数                                                                                            |
-| ------------ | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| code         | 通用代码块插槽                                    | `{ lang: string; rawCode: string }`                                                                 |
-| [lang]       | 特定语言代码块插槽（如`#javascript`、`#mermaid`） | `{ lang: string; rawCode: string }`                                                                 |
-| image        | 图片渲染插槽                                      | `{ src: string; alt: string; title: string }`                                                       |
-| text         | 文本内容插槽                                      | `{ content: string }`                                                                               |
-| emoji        | 表情渲染插槽                                      | `{ content: string }`                                                                               |
-| Html[inline] | 行内 HTML 标签插槽                                | `{ originalContent: string; content: string; tags: string; attrs: Array<{[key: string]: string}> }` |
-| Html[block]  | 块级 HTML 标签插槽                                | `{ originalContent: string; content: string; tags: string; attrs: Array<{[key: string]: string}> }` |
-| mathInline   | 行内公式插槽                                      | `{ content: string }`                                                                               |
-| mathBlock    | 块级公式插槽                                      | `{ content: string }`                                                                               |
+| 插槽名       | 说明                                              | 插槽参数                                                                                               |
+| ------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| code         | 通用代码块插槽                                    | `{ lang: string; rawCode: string }`                                                                    |
+| [lang]       | 特定语言代码块插槽（如`#javascript`、`#mermaid`） | `{ lang: string; rawCode: string }`                                                                    |
+| image        | 图片渲染插槽                                      | `{ src: string; alt: string; title: string }`                                                          |
+| text         | 文本内容插槽                                      | `{ content: string }`                                                                                  |
+| emoji        | 表情渲染插槽                                      | `{ content: string }`                                                                                  |
+| Html[inline] | 行内 HTML 标签插槽                                | `{ originalContent: string; content: string; tagName: string; attrs: Array<{[key: string]: string}> }` |
+| Html[block]  | 块级 HTML 标签插槽                                | `{ originalContent: string; content: string; tagName: string; attrs: Array<{[key: string]: string}> }` |
+| mathInline   | 行内公式插槽                                      | `{ content: string }`                                                                                  |
+| mathBlock    | 块级公式插槽                                      | `{ content: string }`                                                                                  |
 
 ## 注意事项
 

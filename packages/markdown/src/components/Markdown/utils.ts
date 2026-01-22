@@ -1,14 +1,6 @@
-// src/utils.ts
-import type { ExtendedToken, TagToken } from './types';
-import { escape, unescape } from 'es-toolkit/string';
-/**
- * 通用属性获取函数
- * @param node 节点对象
- * @param attrName 要获取的属性名
- * @param fromOpen 是否从open标签获取属性
- * @returns 属性值或空字符串
- */
-export const getAttribute = (
+import type { ExtendedToken, TagAttribute, TagToken } from './types';
+
+export const getImgAttribute = (
   node: ExtendedToken | TagToken,
   attrName: string,
   fromOpen?: boolean,
@@ -22,7 +14,7 @@ export const getAttribute = (
   return '';
 };
 
-export const getAAttr = (node: TagToken, attrName: string) => {
+export const getAAttribute = (node: TagToken, attrName: string) => {
   if (node.open && node.open.attrs) {
     const hrefAttr = node.open.attrs.find((attr: [string, string]) => attr[0] === attrName);
     return hrefAttr ? hrefAttr[1] : '';
@@ -30,72 +22,48 @@ export const getAAttr = (node: TagToken, attrName: string) => {
   return '';
 };
 
-export const escapeHtml = (str: string): string => {
-  return escape(str);
+export const getHtmlAttribute = (completeTag: string, tagName: string, isBlockTag: boolean) => {
+  if (completeTag.includes('hr')) {
+    return {
+      content: completeTag,
+      tagAttrs: [],
+      isSelfClosing: true,
+    };
+  }
+
+  try {
+    const parser = new DOMParser();
+    const tagAttrs: TagAttribute[] = [];
+    const doc = parser.parseFromString(`<div>${completeTag}</div>`, 'text/html');
+    const elements =
+      doc
+        .querySelector('div')
+        ?.querySelectorAll(!isBlockTag ? tagName : [...blockTags].join(',')) || [];
+
+    const content = doc.querySelector('div')?.textContent || '';
+
+    elements.forEach((el) => {
+      const attrMap: TagAttribute = {};
+      Array.from(el.attributes).forEach((attr: any) => {
+        attrMap[attr.name] = attr.value;
+      });
+      tagAttrs.push(attrMap);
+    });
+
+    return {
+      content,
+      tagAttrs,
+      isSelfClosing: false,
+    };
+  } catch (error) {
+    console.error('Error parsing HTML:', error);
+    return {
+      content: '',
+      tagAttrs: [],
+      isSelfClosing: false,
+    };
+  }
 };
-
-export const unescapeHtml = (str: string): string => {
-  return unescape(str);
-};
-
-export const stripOuterPTag = (html: string): string => {
-  let processed = html.replace(/^\s*<p\b[^>]*>\s*/i, '');
-  processed = processed.replace(/\s*<\/p\s*>\s*$/i, '');
-  return processed.trim();
-};
-
-// 块级标签列表
-const blockTags = [
-  'div',
-  'p',
-  'blockquote',
-  'ul',
-  'ol',
-  'li',
-  'h1',
-  'h2',
-  'h3',
-  'h4',
-  'h5',
-  'h6',
-  'pre',
-  'code',
-  'table',
-  'thead',
-  'tbody',
-  'tr',
-  'td',
-  'th',
-  'section',
-  'article',
-  'header',
-  'footer',
-  'nav',
-  'aside',
-  'figure',
-  'figcaption',
-  'hr',
-  'form',
-  'fieldset',
-];
-
-// 行内标签列表
-const inlineTags = [
-  'span',
-  'a',
-  'strong',
-  'em',
-  'br',
-  'img',
-  'input',
-  'label',
-  'code',
-  'mark',
-  'small',
-  'sup',
-  'sub',
-  'q',
-];
 
 /**
  * 匹配标签内容，生成对应的闭合标签（闭合标签/自闭合标签返回空）
@@ -113,7 +81,7 @@ export function generateClosingTag(tagStr: string): {
   tagName: string;
 } {
   // 1. 整合所有有效标签（去重），作为穷尽的标签列表
-  const allValidTags = Array.from(new Set([...blockTags, ...inlineTags]));
+  const allValidTags = Array.from(new Set([...inlineTags, ...blockTags]));
   // 2. 定义独立（自闭合）标签列表
   const selfClosingTags = ['br', 'img', 'input', 'hr'];
   // 3. 预处理：去除首尾空白，获取处理后的标签字符串
@@ -195,74 +163,101 @@ export function generateClosingTag(tagStr: string): {
     tagName,
   };
 }
+
 /**
- * 匹配完整标签内容，生成对应的闭合标签（自闭合标签返回标准自闭合形式）
- * @param tagStr - 完整的标签字符串（如：<span data-type="card">、<br/>，支持属性值含换行）
- * @returns { completeTag: string; isSelfClosing: boolean; tagName: string } - 返回处理结果
+ * 从HTML标签字符串中识别并返回对应的块级标签名
+ * @param htmlTagStr - HTML标签字符串（如 "<div>", "</p>", "<h1 class='title'>" 等）
+ * @returns 匹配到的块级标签名，未匹配到则返回null
  */
-export function generateClosingBlockTag(tagStr: string): {
-  /** 补全后的完整标签字符串 */
-  completeTag: string;
-  /** 是否为独立（自闭合）标签 */
-  isSelfClosing: boolean;
-  /** 提取的标签名（小写格式） */
-  tagName: string;
-} {
-  // 1. 整合所有有效标签（去重），作为穷尽的标签列表
-  const allValidTags = Array.from(new Set([...blockTags, ...inlineTags]));
-  // 2. 定义独立（自闭合）标签列表
-  const selfClosingTags = ['br', 'img', 'input', 'hr'];
-  // 3. 预处理：去除首尾空白，获取处理后的标签字符串
-  const trimmedTag = tagStr.trim();
-  // 初始化返回结果的默认值（移除了isOpenTag）
-  const defaultResult = {
-    completeTag: trimmedTag,
-    isSelfClosing: false,
-    tagName: '',
-  };
-
-  // 校验：标签必须以<开头、以>结尾，否则直接返回无效标签
-  if (!trimmedTag.startsWith('<') || !trimmedTag.endsWith('>')) {
-    return defaultResult;
+export function identifyBlockTag(htmlTagStr: string): string {
+  // 空值校验
+  if (!htmlTagStr || typeof htmlTagStr !== 'string') {
+    return '';
   }
 
-  // 处理开标签（包括普通开标签和自闭合标签）：入参为完整标签，无闭标签
-  // 正则修改点：将[^>]*?替换为[\s\S]*?，支持匹配包含换行的属性内容
-  // 匹配组1：标签名（如span、hr），组2：属性部分（如' data-type="card"xxx'），组3：自闭合符号（/或 /）
-  // [\s\S]表示匹配所有字符（\s是空白，\S是非空白，包含换行）
-  const openTagRegex = /^<([a-zA-Z0-9-]+)(\s+[\s\S]*?)?(\s*\/)?>$/;
-  const openMatch = trimmedTag.match(openTagRegex);
-  if (!openMatch) {
-    // 格式不合法的开标签（如<span incomplete），返回无效
-    return defaultResult;
+  // 去除首尾空格
+  const trimmedStr = htmlTagStr.trim();
+
+  // 从第二个字符开始提取标签名（处理 <div>、</div> 等情况）
+  let tagStartIndex = 1;
+  // 如果第二个字符是 /（闭合标签），则从第三个字符开始
+  if (trimmedStr[1] === '/') {
+    tagStartIndex = 2;
   }
 
-  // 提取开标签的信息
-  const tagName = openMatch[1].toLowerCase();
-  // 校验标签名是否在有效列表中
-  if (!allValidTags.includes(tagName)) {
-    return {
-      completeTag: trimmedTag,
-      isSelfClosing: false,
-      tagName: '',
-    };
-  }
-  const attributes = openMatch[2] || ''; // 属性部分，无则为空字符串
-  const isSelfClosing = selfClosingTags.includes(tagName);
-  let completeTag = '';
-
-  // 补全标签：根据是否为独立标签处理
-  if (isSelfClosing) {
-    // 独立标签：统一补全为标准自闭合形式（<tag attr/>）
-    completeTag = `<${tagName}${attributes}/>`;
-  } else {
-    // 普通开标签：补全为成对标签（<tag attr></tag>）
-    completeTag = `<${tagName}${attributes}></${tagName}>`;
+  // 提取到 > 符号前的部分，或空格前的部分（处理带属性的标签）
+  let tagName = '';
+  for (let i = tagStartIndex; i < trimmedStr.length; i++) {
+    const char = trimmedStr[i];
+    // 遇到 > 或空格则停止提取
+    if (char === '>' || char === ' ') {
+      break;
+    }
+    tagName += char;
   }
 
-  return {
-    completeTag,
-    isSelfClosing,
-    tagName,
-  };
+  // 转为小写并匹配块级标签
+  const lowerCaseTagName = tagName.toLowerCase();
+  return blockTags.includes(lowerCaseTagName) ? lowerCaseTagName : '';
 }
+
+// 行内标签列表
+const inlineTags = [
+  'span',
+  'a',
+  'strong',
+  'em',
+  'br',
+  'img',
+  'input',
+  'label',
+  'code',
+  'mark',
+  'small',
+  'sup',
+  'sub',
+  'q',
+];
+const blockTags = [
+  'div',
+  'p',
+  'blockquote',
+  'ul',
+  'ol',
+  'li',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'pre',
+  'code',
+  'table',
+  'thead',
+  'tbody',
+  'tr',
+  'td',
+  'th',
+  'section',
+  'article',
+  'header',
+  'footer',
+  'nav',
+  'aside',
+  'figure',
+  'figcaption',
+  'hr',
+  'form',
+  'fieldset',
+];
+
+export const sanitizeHtml = async (html: string): Promise<string> => {
+  try {
+    const dompurifyModule = await import('dompurify');
+    return dompurifyModule.default.sanitize(html) ?? '';
+  } catch (error) {
+    console.error('Failed to sanitize HTML:', error);
+    return html;
+  }
+};

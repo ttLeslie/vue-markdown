@@ -1,6 +1,8 @@
 import type { Token } from 'markdown-it';
 import type MarkdownIt from 'markdown-it';
 
+export type TagAttribute = { [key: string]: string };
+
 /**
  * 扩展的Token类型，增加组件类型标识
  */
