@@ -7,11 +7,24 @@
         breaks: true,
         html: true,
       }"
+      :inline-tags="['badge', 'tag']"
       :sanitize="true"
     >
       <!-- 特定标签的插槽：span -->
       <template #HtmlSpan="{ tag, attrs, content }">
         <span class="highlight-tag"> 🔍 {{ content }} {{ attrs[0]['data-content'] }} </span>
+      </template>
+      <!-- 自定义行内标签：badge -->
+      <template #HtmlBadge="{ content, attrs }">
+        <span class="badge" :style="{ backgroundColor: attrs[0]?.color || '#007bff' }">
+          {{ content || attrs[0]?.text || 'Badge' }}
+        </span>
+      </template>
+      <!-- 自定义行内标签：tag -->
+      <template #HtmlTag="{ content, attrs }">
+        <span class="tag" :style="{ color: attrs[0]?.color || '#28a745' }">
+          #{{ content || attrs[0]?.text || 'Tag' }}
+        </span>
       </template>
     </AgentMarkdown>
   </div>
@@ -31,6 +44,13 @@ const content = `
 
 内容12313
 <span data-type="card" data-title="苏州市人民政府" data-content="https://thaka.bing.com/th/id/OIP.aBW9fjZTNtddeFpYAzcgJwHaLB?&rs=1&pid=ImgDetMain&o=7&rm=3"></span>
+
+
+<card>111</card>
+
+## 自定义行内标签示例
+
+通过 \`inlineTags\` prop 添加的自定义标签：<badge color="#ff6b6b" text="重要">重要</badge> 和 <tag color="#28a745" text="Vue">Vue</tag>。
 `;
 </script>
 
@@ -139,5 +159,26 @@ const content = `
   font-style: italic;
   color: #673ab7;
   border-left: 3px solid #673ab7;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: white;
+  border-radius: 12px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #f0f0f0;
+  border-radius: 4px;
 }
 </style>

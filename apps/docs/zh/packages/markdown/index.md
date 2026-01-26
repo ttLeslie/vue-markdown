@@ -95,6 +95,12 @@ body > [id^='dv-'] svg {
 
 <demo vue="markdown/basicInline.vue" :vueFiles="{'demo': 'markdown/exbasicInline.vue'}" />
 
+## 自定义行内标签
+
+通过 `inlineTags` prop 可以添加自定义的行内标签列表。默认情况下，组件内置了一些常见的行内标签（如 `span`、`a`、`strong`、`em`、`br`、`img`、`input`、`label`、`code`、`mark`、`small`、`sup`、`sub`、`q`、`card` 等）。当你需要添加新的自定义行内标签时，可以通过 `inlineTags` prop 传入标签名数组，这些标签会被解析为行内标签，并可以通过对应的插槽（如 `HtmlBadge`、`HtmlTag` 等）进行自定义渲染。
+
+<demo vue="markdown/customInlineTags.vue" />
+
 ## 自定义块级可交互组件
 
 通过 `HtmlDiv`插槽可处理块级 `HTML` 标签（如`div`），结合标签属性实现复杂的块级交互组件，例如带标题和元数据的自定义卡片。
@@ -117,12 +123,13 @@ body > [id^='dv-'] svg {
 
 ### Props
 
-| 参数名    | 类型      | 默认值  | 说明                                                                                             |
-| --------- | --------- | ------- | ------------------------------------------------------------------------------------------------ |
-| content   | `string`  | `''`    | 必选，需要渲染的 markdown 文本                                                                   |
-| mdOptions | `Object`  | `{}`    | 可选，markdown-it 的配置选项，详见[markdown-it 文档](https://markdown-it.github.io/markdown-it/) |
-| href      | `boolean` | `false` | 可选，是否启用超链接解析到href属性上，默认不解析，可通过`link-click`事件获取点击信息             |
-| sanitize  | `boolean` | `false` | 可选，是否启用 HTML 内容 sanitize（防止 XSS 攻击，依赖`dompurify`）                              |
+| 参数名     | 类型       | 默认值  | 说明                                                                                             |
+| ---------- | ---------- | ------- | ------------------------------------------------------------------------------------------------ |
+| content    | `string`   | `''`    | 必选，需要渲染的 markdown 文本                                                                   |
+| mdOptions  | `Object`   | `{}`    | 可选，markdown-it 的配置选项，详见[markdown-it 文档](https://markdown-it.github.io/markdown-it/) |
+| href       | `boolean`  | `false` | 可选，是否启用超链接解析到href属性上，默认不解析，可通过`link-click`事件获取点击信息             |
+| sanitize   | `boolean`  | `false` | 可选，是否启用 HTML 内容 sanitize（防止 XSS 攻击，依赖`dompurify`）                              |
+| inlineTags | `string[]` | `[]`    | 可选，自定义行内标签列表，添加的标签会被解析为行内标签，可通过对应的插槽进行自定义渲染           |
 
 ### Events
 
@@ -152,3 +159,4 @@ body > [id^='dv-'] svg {
 2.  **公式支持**：默认集成`katex`插件支持数学公式，如需自定义公式样式可通过`mathInline`和`mathBlock`插槽实现。
 3.  **扩展配置**：通过`mdOptions`可扩展 markdown-it 的功能，例如添加自定义插件或修改解析规则。
 4.  **插槽优先级**：特定语言插槽（如`#mermaid`）优先级高于通用`#code`插槽，确保特殊场景优先被处理。
+5.  **自定义行内标签**：通过`inlineTags` prop 添加的自定义标签会被解析为行内标签，可以通过对应的插槽（如`HtmlBadge`、`HtmlTag`等）进行自定义渲染。插槽命名规则为：`Html` + 标签名首字母大写（如`badge`对应`HtmlBadge`）。

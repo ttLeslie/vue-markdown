@@ -22,7 +22,12 @@ export const getAAttribute = (node: TagToken, attrName: string) => {
   return '';
 };
 
-export const getHtmlAttribute = (completeTag: string, tagName: string, isBlockTag: boolean) => {
+export const getHtmlAttribute = (
+  completeTag: string,
+  tagName: string,
+  isBlockTag: boolean,
+  customBlockTags: string[] = [],
+) => {
   if (completeTag.includes('hr')) {
     return {
       content: completeTag,
@@ -35,10 +40,11 @@ export const getHtmlAttribute = (completeTag: string, tagName: string, isBlockTa
     const parser = new DOMParser();
     const tagAttrs: TagAttribute[] = [];
     const doc = parser.parseFromString(`<div>${completeTag}</div>`, 'text/html');
+    const allBlockTags = Array.from(new Set([...blockTags, ...customBlockTags]));
     const elements =
       doc
         .querySelector('div')
-        ?.querySelectorAll(!isBlockTag ? tagName : [...blockTags].join(',')) || [];
+        ?.querySelectorAll(!isBlockTag ? tagName : [...allBlockTags].join(',')) || [];
 
     const content = doc.querySelector('div')?.textContent || '';
 
@@ -68,9 +74,15 @@ export const getHtmlAttribute = (completeTag: string, tagName: string, isBlockTa
 /**
  * 匹配标签内容，生成对应的闭合标签（闭合标签/自闭合标签返回空）
  * @param tagStr - 标签内容字符串（如：<span data-type="card">、</span>、<br/>）
+ * @param customInlineTags - 自定义行内标签列表
+ * @param customBlockTags - 自定义块级标签列表
  * @returns { completeTag: string; isOpenTag: boolean; isSelfClosing: boolean; tagName: string } - 返回处理结果
  */
-export function generateClosingTag(tagStr: string): {
+export function generateClosingTag(
+  tagStr: string,
+  customInlineTags: string[] = [],
+  customBlockTags: string[] = [],
+): {
   /** 补全后的完整标签字符串 */
   completeTag: string;
   /** 是否为开标签（非闭标签） */
@@ -81,7 +93,9 @@ export function generateClosingTag(tagStr: string): {
   tagName: string;
 } {
   // 1. 整合所有有效标签（去重），作为穷尽的标签列表
-  const allValidTags = Array.from(new Set([...inlineTags, ...blockTags]));
+  const allInlineTags = Array.from(new Set([...inlineTags, ...customInlineTags]));
+  const allBlockTags = Array.from(new Set([...blockTags, ...customBlockTags]));
+  const allValidTags = Array.from(new Set([...allInlineTags, ...allBlockTags]));
   // 2. 定义独立（自闭合）标签列表
   const selfClosingTags = ['br', 'img', 'input', 'hr'];
   // 3. 预处理：去除首尾空白，获取处理后的标签字符串
@@ -167,9 +181,10 @@ export function generateClosingTag(tagStr: string): {
 /**
  * 从HTML标签字符串中识别并返回对应的块级标签名
  * @param htmlTagStr - HTML标签字符串（如 "<div>", "</p>", "<h1 class='title'>" 等）
+ * @param customBlockTags - 自定义块级标签列表
  * @returns 匹配到的块级标签名，未匹配到则返回null
  */
-export function identifyBlockTag(htmlTagStr: string): string {
+export function identifyBlockTag(htmlTagStr: string, customBlockTags: string[] = []): string {
   // 空值校验
   if (!htmlTagStr || typeof htmlTagStr !== 'string') {
     return '';
@@ -198,11 +213,12 @@ export function identifyBlockTag(htmlTagStr: string): string {
 
   // 转为小写并匹配块级标签
   const lowerCaseTagName = tagName.toLowerCase();
-  return blockTags.includes(lowerCaseTagName) ? lowerCaseTagName : '';
+  const allBlockTags = Array.from(new Set([...blockTags, ...customBlockTags]));
+  return allBlockTags.includes(lowerCaseTagName) ? lowerCaseTagName : '';
 }
 
 // 行内标签列表
-const inlineTags = [
+export const inlineTags = [
   'span',
   'a',
   'strong',
@@ -217,8 +233,9 @@ const inlineTags = [
   'sup',
   'sub',
   'q',
+  'card',
 ];
-const blockTags = [
+export const blockTags = [
   'div',
   'p',
   'blockquote',

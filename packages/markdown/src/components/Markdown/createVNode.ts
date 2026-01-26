@@ -16,9 +16,13 @@ const processChildren = (
   slots: Slots,
   sanitize: boolean,
   href: boolean,
+  customInlineTags: string[] = [],
+  customBlockTags: string[] = [],
 ): (VNode | string)[] => {
   return children
-    .map((child, index) => createVNode(child, index, mdIt, slots, sanitize, href))
+    .map((child, index) =>
+      createVNode(child, index, mdIt, slots, sanitize, href, customInlineTags, customBlockTags),
+    )
     .filter(Boolean) as (VNode | string)[];
 };
 
@@ -57,16 +61,25 @@ const handleFenceNode = (
   );
 };
 
-const handleHtmlLine = (node: RendererToken, index: number, slots: Slots, sanitize: boolean) => {
+const handleHtmlLine = (
+  node: RendererToken,
+  index: number,
+  slots: Slots,
+  sanitize: boolean,
+  customInlineTags: string[] = [],
+  customBlockTags: string[] = [],
+) => {
   const tagNode = node as TagToken;
   const tagAttrs: TagAttribute[] = [];
   let content = '';
 
-  console.log('handleHtmlLine', tagNode);
-
   const { completeTag, isOpenTag, isSelfClosing, tagName } = generateClosingTag(
     tagNode.content || '',
+    customInlineTags,
+    customBlockTags,
   );
+
+  console.log(completeTag, isOpenTag, isSelfClosing, tagName);
 
   const defaultRender = h('span', {
     key: index,
@@ -82,6 +95,7 @@ const handleHtmlLine = (node: RendererToken, index: number, slots: Slots, saniti
         completeTag,
         tagName,
         false,
+        customBlockTags,
       );
       content = parsedContent;
       tagAttrs.push(...parsedTagAttrs);
@@ -124,7 +138,14 @@ const handleHtmlLine = (node: RendererToken, index: number, slots: Slots, saniti
   return defaultRender;
 };
 
-const handleHtmlBlock = (node: RendererToken, index: number, slots: Slots, sanitize: boolean) => {
+const handleHtmlBlock = (
+  node: RendererToken,
+  index: number,
+  slots: Slots,
+  sanitize: boolean,
+  _customInlineTags: string[] = [],
+  customBlockTags: string[] = [],
+) => {
   const tagNode = node as TagToken;
   const tagAttrs: TagAttribute[] = [];
   let content = '';
@@ -139,11 +160,11 @@ const handleHtmlBlock = (node: RendererToken, index: number, slots: Slots, sanit
       content: parsedContent,
       tagAttrs: parsedTagAttrs,
       isSelfClosing,
-    } = getHtmlAttribute(tagNode.content || '', '', true);
+    } = getHtmlAttribute(tagNode.content || '', '', true, customBlockTags);
     if (isSelfClosing) return defaultRender;
     content = parsedContent;
     tagAttrs.push(...parsedTagAttrs);
-    const tagName = identifyBlockTag(tagNode.content || '');
+    const tagName = identifyBlockTag(tagNode.content || '', customBlockTags);
 
     const slotParams = {
       originalContent: tagNode.content || '',
@@ -151,7 +172,6 @@ const handleHtmlBlock = (node: RendererToken, index: number, slots: Slots, sanit
       tagName,
       attrs: tagAttrs,
     };
-    console.log(tagName);
 
     const slotResult = handleSlot(
       'Html' + tagName.charAt(0).toUpperCase() + tagName.slice(1),
@@ -191,8 +211,12 @@ export default function createVNode(
   slots: Slots,
   sanitize: boolean,
   href: boolean,
+  customInlineTags: string[] = [],
+  customBlockTags: string[] = [],
 ): VNode | string | null {
   const { ComponentType } = node;
+
+  console.log(node);
 
   if (!ComponentType) return null;
 
@@ -223,7 +247,15 @@ export default function createVNode(
       return h('br', { key: index });
 
     case 'inline': {
-      const children = processChildren((node as TagToken).children, mdIt, slots, sanitize, href);
+      const children = processChildren(
+        (node as TagToken).children,
+        mdIt,
+        slots,
+        sanitize,
+        href,
+        customInlineTags,
+        customBlockTags,
+      );
       return h(Fragment, { key: index }, children);
     }
 
@@ -308,17 +340,25 @@ export default function createVNode(
     }
 
     case 'html_inline': {
-      return handleHtmlLine(node, index, slots, sanitize);
+      return handleHtmlLine(node, index, slots, sanitize, customInlineTags, customBlockTags);
     }
 
     case 'html_block': {
-      return handleHtmlBlock(node, index, slots, sanitize);
+      return handleHtmlBlock(node, index, slots, sanitize, customInlineTags, customBlockTags);
     }
 
     case 'default': {
       const tagNode = node as TagToken;
       const { tag, children } = tagNode;
-      const childNodes = processChildren(children, mdIt, slots, sanitize, href);
+      const childNodes = processChildren(
+        children,
+        mdIt,
+        slots,
+        sanitize,
+        href,
+        customInlineTags,
+        customBlockTags,
+      );
       const baseProps: Record<string, string | number> = { key: index, class: `markdown-${tag}` };
 
       if (tag === 'a') {

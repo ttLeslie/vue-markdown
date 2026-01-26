@@ -30,6 +30,11 @@ const MarkdownRenderer = defineComponent({
       default: false,
       required: false,
     },
+    inlineTags: {
+      type: Array as () => string[],
+      default: () => [],
+      required: false,
+    },
   },
   setup(props, { emit, slots }) {
     return (): VNode => {
@@ -37,7 +42,16 @@ const MarkdownRenderer = defineComponent({
       const tree = getCompontentTree(props.content, mdIt);
 
       const vNodes = tree.map((node, index) => {
-        return createVNode(node, index, mdIt, slots, props.sanitize, props.href);
+        return createVNode(
+          node,
+          index,
+          mdIt,
+          slots,
+          props.sanitize,
+          props.href,
+          props.inlineTags,
+          [],
+        );
       });
 
       return h(
